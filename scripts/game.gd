@@ -1,7 +1,7 @@
 extends Node3D
 
-# ZUTSUKI! - single-script, importable Godot 4 prototype.
-# All game settings can be changed live with F1, and saved to user://settings.cfg.
+# ZUTSUKI gameplay prototype for Godot 4.
+# Developer settings are adjustable with F1 and stored in user://settings.cfg.
 const TRACK_LENGTH := 480.0
 const TRACK_HALF_WIDTH := 11.0
 const GATE_Z := [-32.0, -65.0, -98.0, -131.0, -195.0, -225.0, -255.0, -285.0, -350.0, -380.0, -410.0, -440.0]
@@ -136,7 +136,13 @@ func build_world() -> void:
 	player_visual = Node3D.new()
 	player.add_child(player_visual)
 	var sprite := Sprite3D.new()
-	sprite.texture = load("res://assets/samurai.png")
+	var samurai_texture := load("res://assets/samurai.png") as Texture2D
+	if samurai_texture != null:
+		sprite.texture = samurai_texture
+	else:
+		# Keep a visible player while the optional artwork is being imported.
+		var fallback := sphere(player_visual, Vector3(0, 0.8, 0), Vector3(0.55, 0.85, 0.4), Color("7d45c6"))
+		fallback.name = "Samurai Placeholder"
 	sprite.pixel_size = 0.002
 	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	sprite.no_depth_test = false
@@ -337,7 +343,8 @@ func restart() -> void:
 	score = 0
 	run_time = 0.0
 	bonk_cooldown = 0.0
-	if win_panel != null: win_panel.visible = false
+	if win_panel != null:
+		win_panel.visible = false
 	for guard in guards:
 		guard["defeated"] = false
 		guard["node"].visible = true
@@ -357,7 +364,8 @@ func restart() -> void:
 
 func refresh_darumas() -> void:
 	for d in darumas:
-		if is_instance_valid(d): d.queue_free()
+		if is_instance_valid(d):
+			d.queue_free()
 	darumas.clear()
 	for i in range(int(settings["daruma"])):
 		var d := make_daruma()
@@ -392,7 +400,8 @@ func headbutt() -> void:
 	attack_time = 0.3
 	bonk_cooldown = 0.33
 	for sc in shortcuts:
-		if sc["broken"]: continue
+		if sc["broken"]:
+			continue
 		if abs(player.position.z - sc["node"].position.z) < 4.0 and abs(player.position.x - sc["node"].position.x) < 3.0:
 			sc["broken"] = true
 			sc["node"].visible = false
@@ -402,7 +411,8 @@ func headbutt() -> void:
 			show_status("SECRET SHORTCUT!  -20m  +250 x COMBO", 3.0)
 			return
 	for guard in guards:
-		if guard["defeated"]: continue
+		if guard["defeated"]:
+			continue
 		var n: Node3D = guard["node"]
 		if player.position.distance_to(n.position) < 4.0:
 			guard["defeated"] = true
@@ -412,8 +422,10 @@ func headbutt() -> void:
 			show_status("GIANT GUARD BONKED!  Weak spot hit!", 2.0)
 			return
 	for gate in gates:
-		if gate["broken"]: continue
-		if abs(player.position.z - gate["node"].position.z) > 4.2: continue
+		if gate["broken"]:
+			continue
+		if abs(player.position.z - gate["node"].position.z) > 4.2:
+			continue
 		var lane := clampi(int(round(player.position.x / 4.5)) + 2, 0, 4)
 		if lane == gate["correct"]:
 			gate["broken"] = true
@@ -438,12 +450,14 @@ func spawn_leaves(pos: Vector3) -> void:
 
 func _process(delta: float) -> void:
 	clock += delta
-	if not finished and not settings_panel.visible: run_time += delta
+	if not finished and not settings_panel.visible:
+		run_time += delta
 	bonk_cooldown = maxf(0.0, bonk_cooldown - delta)
 	if combo_time > 0:
 		combo_time -= delta
 		if combo_time <= 0: combo = 0
-	if trophy != null: trophy.rotation.y += delta * 0.7
+	if trophy != null:
+		trophy.rotation.y += delta * 0.7
 	for guard in guards:
 		if not guard["defeated"]:
 			var gnode: Node3D = guard["node"]
@@ -456,22 +470,26 @@ func _process(delta: float) -> void:
 		status_timer -= delta
 		if status_timer <= 0:
 			status_label.text = "WASD: Move  |  Space: Headbutt  |  Shift: Dash  |  F1: Settings  |  R: Restart"
-	if attack_time > 0: attack_time -= delta
-	if dash_time > 0: dash_time -= delta
+	if attack_time > 0:
+		attack_time -= delta
+	if dash_time > 0:
+		dash_time -= delta
 	if not settings_panel.visible and not finished:
 		var direction := Vector2.ZERO
 		if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): direction.x -= 1
 		if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): direction.x += 1
 		if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): direction.y -= 1
 		if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): direction.y += 1
-		if direction.length() > 1: direction = direction.normalized()
+		if direction.length() > 1:
+			direction = direction.normalized()
 		var multiplier := 2.0 if dash_time > 0 else 1.0
 		var motion := Vector3(direction.x, 0, direction.y) * float(settings["speed"]) * multiplier * delta
 		var candidate := player.position + motion
 		candidate.x = clampf(candidate.x, -9.7, 9.7)
 		candidate.z = clampf(candidate.z, -479, 2)
 		for gate in gates:
-			if gate["broken"]: continue
+			if gate["broken"]:
+			continue
 			if player.position.z > gate["node"].position.z and candidate.z < gate["node"].position.z + 1.2:
 				candidate.z = gate["node"].position.z + 1.2
 		player.position = candidate
@@ -495,10 +513,12 @@ func _process(delta: float) -> void:
 	cam.position = cam.position.lerp(desired, minf(1, delta * 5))
 	cam.look_at(player.position + Vector3(0, 0, -8), Vector3.UP)
 	for d in darumas:
-		if not is_instance_valid(d): continue
+		if not is_instance_valid(d):
+			continue
 		var i := int(d.get_meta("index"))
 		d.position.z -= delta * (5.0 + i * 0.3)
-		if d.position.z < -480: d.position.z = 5
+		if d.position.z < -480:
+			d.position.z = 5
 		var body: Node3D = d.get_meta("body")
 		body.rotation.x -= delta * 2.7
 		body.rotation.z = sin(clock * 5.0 + i) * 0.15
@@ -536,7 +556,8 @@ func spawn_confetti() -> void:
 func count_broken() -> int:
 	var result := 0
 	for gate in gates:
-		if gate["broken"]: result += 1
+		if gate["broken"]:
+			result += 1
 	return result
 
 func load_settings() -> void:
@@ -547,7 +568,8 @@ func load_settings() -> void:
 
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
-	for key in settings.keys(): cfg.set_value("developer", key, settings[key])
+	for key in settings.keys():
+		cfg.set_value("developer", key, settings[key])
 	cfg.save("user://settings.cfg")
 	show_status("Developer settings saved!", 2.0)
 
